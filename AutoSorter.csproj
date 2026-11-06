@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <Version>0.3.0</Version>
+    <Deterministic>true</Deterministic>
+    <PathMap>$(MSBuildProjectDirectory)=AutoSorter</PathMap>
+    <GameDir Condition="'$(GameDir)' == ''">D:\SteamLibrary\steamapps\common\SpaceEngineers2\Game2</GameDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="src\*.cs" />
+    <PackageReference Include="MonoMod.RuntimeDetour" Version="25.3.3" />
+    <Reference Include="$(GameDir)\VRage.Core.dll;$(GameDir)\VRage.Core.Game.dll;$(GameDir)\VRage.Library.dll;$(GameDir)\VRage.Input.dll;$(GameDir)\VRage.DCS.dll;$(GameDir)\VRage.Game.dll;$(GameDir)\VRage.Multiplayer.dll;$(GameDir)\Game2.Client.dll;$(GameDir)\Game2.Game.dll;$(GameDir)\Game2.Simulation.dll;$(GameDir)\Avalonia.Base.dll;$(GameDir)\Avalonia.Controls.dll;$(GameDir)\DynamicData.dll;$(GameDir)\VRage.UI.dll;$(GameDir)\VRage.UI.Shared.dll;$(GameDir)\VRage.Game.Client.dll;$(GameDir)\System.Reactive.dll">
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+</Project>
+

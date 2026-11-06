@@ -1,0 +1,13 @@
+{
+  "Enabled": true,
+  "ManualButton": true,
+  "AutoSort": false,
+  "StepDelayMs": 50,
+  "TransferTimeoutMs": 5000,
+  "MaxTransfersPerPress": 500,
+  "IntervalSeconds": 2,
+  "MaxTransferAttempts": 64,
+  "MaxItemChecks": 256,
+  "SoftTimeBudgetMs": 10,
+  "DryRun": false
+}

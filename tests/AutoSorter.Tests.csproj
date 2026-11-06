@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup><Compile Include="..\src\Rules.cs" Link="Rules.cs" /><Compile Include="..\src\SortPlan.cs" Link="SortPlan.cs" /></ItemGroup>
+</Project>

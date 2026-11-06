@@ -1,0 +1,8 @@
+bin/
+obj/
+**/bin/
+**/obj/
+*.log
+*.log.1
+build-log.txt
+*.zip
