@@ -40,6 +40,11 @@ internal sealed class ManualSorter
     private readonly Action<string?> _status;
     private readonly DispatcherTimer _timer;
     private readonly HashSet<(int, Guid, int)> _blocked = new();
+    // 0.4.0: refusals per (from, item, to). Ice is pulled out by O2/H2 generators while we sort, so
+    // a refusal is often just "the amount changed under us": try again a few times before giving up.
+    private readonly Dictionary<(int, Guid, int), int> _refusals = new();
+    private const int MaxRefusals = 3;
+    private List<int?> _onlyRank = new();
     private readonly Stopwatch _clock = Stopwatch.StartNew();
 
     private List<InventoryModel> _inventories = new();
@@ -50,7 +55,7 @@ internal sealed class ManualSorter
     private KeenTask _pending;
     private SortMove _move;
     private InventoryModel? _waitFrom, _waitTo;
-    private double _fromCountBefore, _toCountBefore;
+    private double _fromCountBefore, _toCountBefore, _moved;
     private long _waitStarted;
     private int _transfers, _failures;
 
@@ -114,7 +119,12 @@ internal sealed class ManualSorter
         if (_inventories.Count < 2)
         {
             Log.Write($"Sort: {_inventories.Count} sortable container(s) in this list; need at least 2.");
-            _status(_inventories.Count == 0 ? "AutoSorter: нет подходящих контейнеров / no cargo containers" : null);
+            // 0.3.2: say it on screen, not only in the log — a silent button looks broken.
+            _status(_inventories.Count == 0
+                ? "AutoSorter: в этом списке нет грузовых контейнеров\nNo cargo containers in this list"
+                : "AutoSorter: в этом списке только 1 грузовой контейнер — сортировать не между чем.\n"
+                  + "Включите «показать подключённые» или откройте терминал станции, где контейнеров больше.\n"
+                  + "Only 1 cargo container in this list — nothing to sort between.");
             return false;
         }
 
@@ -137,15 +147,25 @@ internal sealed class ManualSorter
                 fixedStacks++;
             }
             int? stacks = i.MaxStacks.HasValue ? Math.Max(0, i.MaxStacks.Value - fixedStacks) : null;
-            return new SortContainer(Math.Max(0, (double)i.MaxMass - fixedMass), stacks);
+            return new SortContainer(Math.Max(0, (double)i.MaxMass - fixedMass), stacks, SortPlan.NameRank(i.EntityName));
         }).ToList();
+        _onlyRank = capacity.Select(c => c.OnlyRank).ToList();
         _homes = SortPlan.Homes(capacity, _types, current);
 
         LogKinds();
         Log.Write($"Sort started: {_inventories.Count} container(s), {_types.Count} item kind(s): "
-            + string.Join(", ", _inventories.Select((i, n) => $"#{n + 1} '{i.EntityName}' {(double)i.Mass:0}/{(double)i.MaxMass:0}kg")));
+            + string.Join(", ", _inventories.Select((i, n) => $"#{n + 1} '{i.EntityName}' {(double)i.Mass:0}/{(double)i.MaxMass:0}kg"
+                + (_onlyRank[n] is int r ? $" [only {RankName(r)}]" : ""))));
+        // 0.3.1: what lies where, and each kind's home — so a "stuck" pile can be explained from the log.
+        var names = _types.ToDictionary(t => t.Key, t => t.Name);
+        for (int n = 0; n < current.Count; n++)
+            Log.Write($"  #{n + 1}: " + (current[n].Count == 0 ? "(empty)" : string.Join(", ",
+                current[n].OrderByDescending(kv => kv.Value).Select(kv => $"{(names.TryGetValue(kv.Key, out var nm) ? nm : kv.Key.ToString())} {kv.Value:0.##}"))));
+        Log.Write("  homes: " + string.Join(", ", _types.Where(t => _homes.ContainsKey(t.Key)).Select(t => $"{t.Name}->#{_homes[t.Key] + 1}")));
         return true;
     }
+
+    private static string RankName(int rank) => rank switch { 0 => "ore", 1 => "ingots", 2 => "components", _ => "other" };
 
     /// <summary>One line per item kind with the decision, so a wrongly moved mod item is easy to spot.</summary>
     private void LogKinds()
@@ -247,7 +267,7 @@ internal sealed class ManualSorter
         var current = Snapshot(out _);
         // Real free room right now, as the game shows it (includes tools and anything else).
         var free = _inventories.Select(i => Math.Max(0, (double)i.MaxMass - (double)i.Mass)).ToList();
-        var move = SortPlan.NextMove(current, free, _types, _homes, _blocked);
+        var move = SortPlan.NextMove(current, free, _types, _homes, _blocked, _onlyRank);
         if (move == null)
         {
             Finish("done");
@@ -311,25 +331,35 @@ internal sealed class ManualSorter
         var result = outcome?.Item1 ?? ItemTransferResult.ErrorMissingItem;
         var moved = outcome?.Item2 ?? FixedPoint.Zero;
 
+        var key = (_move.From, _move.Item, _move.To);
         if (moved > FixedPoint.Zero)
         {
             _transfers++;
+            _moved = (double)moved;
+            _refusals.Remove(key);
             // Room was freed in the source: earlier refusals INTO it may succeed now.
             _blocked.RemoveWhere(b => b.Item3 == _move.From);
-        }
-        if (result != ItemTransferResult.Success || moved <= FixedPoint.Zero)
-        {
-            _failures++;
-            _blocked.Add((_move.From, _move.Item, _move.To));
-            Log.Write($"Transfer '{_waitFrom?.EntityName}' -> '{_waitTo?.EntityName}': {result}, moved {(double)moved:0.##}.");
-        }
-
-        if (moved > FixedPoint.Zero)
-        {
+            // 0.4.0: the game moves "as much as there is" and then reports ErrorFit when that was
+            // less than asked — e.g. a generator took some ice in the meantime. That is not a refusal:
+            // the next step simply looks again. (0.3.x blocked the pile here, so ice "never finished".)
+            if (result != ItemTransferResult.Success)
+                Log.Write($"  partial: {result}, moved {(double)moved:0.###} of {_move.Amount:0.###} (amount changed meanwhile?)");
             _waitStarted = _clock.ElapsedMilliseconds;
             _phase = Phase.WaitScreen;
+            return;
         }
-        else _phase = Phase.NextStep;
+
+        _failures++;
+        int tries = _refusals.TryGetValue(key, out int t) ? t + 1 : 1;
+        _refusals[key] = tries;
+        if (tries >= MaxRefusals || result is ItemTransferResult.ErrorFull or ItemTransferResult.ErrorFilter
+            or ItemTransferResult.ErrorConnection or ItemTransferResult.ErrorFunctional)
+            _blocked.Add(key);
+        Log.Write($"Transfer '{_waitFrom?.EntityName}' -> '{_waitTo?.EntityName}': {result}, moved 0 (try {tries}).");
+        // Give the screen a moment to catch up before the retry reads the inventories again.
+        _waitStarted = _clock.ElapsedMilliseconds;
+        _moved = 0;
+        _phase = Phase.WaitScreen;
     }
 
     /// <summary>
@@ -338,15 +368,40 @@ internal sealed class ManualSorter
     /// </summary>
     private void WaitScreen()
     {
-        bool fromChanged = _waitFrom == null || Math.Abs(Count(_waitFrom, _move.Item) - _fromCountBefore) > SortPlan.Epsilon;
-        bool toChanged = _waitTo == null || Math.Abs(Count(_waitTo, _move.Item) - _toCountBefore) > SortPlan.Epsilon;
-        if (fromChanged && toChanged)
+        long waited = _clock.ElapsedMilliseconds - _waitStarted;
+        if (_moved <= 0)
+        {
+            // After a refusal: a short pause, so a retry sees fresh amounts.
+            if (waited >= 250) _phase = Phase.NextStep;
+            return;
+        }
+
+        // 0.4.0: an O2/H2 generator pulls ice out of BOTH containers while we sort, so "the count
+        // changed" alone is not proof that the screen shows OUR transfer. The source must have lost
+        // at least what was moved (a generator can only make it less); the target must show a gain
+        // — or, when a generator drains it at the same time, at least some change after a while.
+        double tol = Math.Max(1e-3, _moved * 1e-4);
+        double fromNow = _waitFrom == null ? double.NaN : Count(_waitFrom, _move.Item);
+        double toNow = _waitTo == null ? double.NaN : Count(_waitTo, _move.Item);
+        bool fromDone = _waitFrom == null || _fromCountBefore - fromNow >= _moved - tol;
+        bool toDone = _waitTo == null || toNow - _toCountBefore >= _moved - tol
+            || (waited > 500 && Math.Abs(toNow - _toCountBefore) > SortPlan.Epsilon);
+        if (fromDone && toDone)
         {
             _phase = Phase.NextStep;
             return;
         }
-        if (_clock.ElapsedMilliseconds - _waitStarted > Settings.Current.TransferTimeoutMs)
-            Finish("the screen did not update after a transfer; stopped for safety");
+        if (waited > Settings.Current.TransferTimeoutMs)
+        {
+            bool anyChange = Math.Abs(fromNow - _fromCountBefore) > SortPlan.Epsilon || Math.Abs(toNow - _toCountBefore) > SortPlan.Epsilon;
+            if (!anyChange)
+            {
+                Finish("the screen did not update after a transfer; stopped for safety");
+                return;
+            }
+            Log.Write($"  screen shows a partial change ({_fromCountBefore:0.###}->{fromNow:0.###}, {_toCountBefore:0.###}->{toNow:0.###}); continuing");
+            _phase = Phase.NextStep;
+        }
     }
 
     private static double Count(InventoryModel inventory, Guid item)

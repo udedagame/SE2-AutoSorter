@@ -19,13 +19,35 @@ It is a manually installed **plugin** (loaded with the game's `-plugins:` launch
 - **Only ore, ingots and components are sorted.** Tools and weapons (vanilla *and* modded), consumables, datapads, quest items and schematics stay exactly where they are.
 - **Exclude a container** by adding `[NoSort]` or `[Не сортировать]` anywhere in its name.
 
+## Containers by name: "Ore", "Ingots", "Components" (0.4.0)
+
+To keep ore apart from parts, put the category in the container's **name**:
+
+| Word in the name | What goes there |
+|---|---|
+| `Ore`, `Ores`, `Руда` | ore only (any ore, all together: iron, nickel, ice…) |
+| `Ingots`, `Ingot`, `Слитки` | ingots and materials only |
+| `Components`, `Parts`, `Компоненты`, `Детали` | components only |
+
+For example `Ore 1`, `Ore 2`, `Руда 0.50`. On a press:
+
+- **all ore** from ordinary containers moves into the "Ore" containers — the first one, then the next when it is full (a pile may be split);
+- **wire, plates, rods, grids and the rest** are never put into an "Ore" container; if they already lie there, the button moves them out to an ordinary container;
+- when every "Ore" container is full, the remaining ore stays where it is — nothing is pushed into ordinary containers.
+
+Whole words only: "Core", "Store" or "Рудник" are not tags. A name with two categories ("Ore and ingots") is an ordinary container. `[NoSort]` still wins.
+
+## Ice and O₂/H₂ generators (fixed in 0.4.0)
+
+An O₂/H₂ generator pulls ice out of the containers through the conveyor while the button is sorting. The game then moves "what is left" and answers "did not all fit"; 0.3.x took that as a refusal and left that ice alone for the rest of the press, so ice never finished moving. Now a partial transfer is a normal result, a refusal is retried up to 3 times with fresh amounts, and the wait for the screen allows for the generator draining ice from both containers at once.
+
 ## Tools stay in your backpack
 
 The game's quick deposit (**Alt + right mouse button** on a container) unloads everything except a short list of "essential" items, which does not include modded tools. AutoSorter adds every tool and weapon the game has registered (including mods such as AreaTools) to that list for the duration of the deposit, so your tools stay in the backpack.
 
 ## Installation
 
-1. Download **`AutoSorter-0.3.0.zip`** from the release's **Assets** (not GitHub's "Source code" archives).
+1. Download **`AutoSorter-0.4.0.zip`** from the release's **Assets** (not GitHub's "Source code" archives).
 2. Close the game. Extract the whole **AutoSorter** folder to a permanent place, for example `D:\SE2Mods\AutoSorter`. Keep all DLLs together.
 3. In Steam: **Space Engineers 2 → Properties → General → Launch Options**, enter:
 
@@ -42,7 +64,7 @@ The game's quick deposit (**Alt + right mouse button** on a container) unloads e
    Use your real paths. If you already have a `-plugins:` argument, add the path to it with `;` — do not add a second `-plugins:`.
 4. Start the game, open a container, **Inventory** tab: the three-bar button is at the top right of each list.
 
-`AutoSorter.log` next to the DLL should contain `AutoSorter 0.3.0 starting` and `Hook installed on InventoryList.InitializeComponent`.
+`AutoSorter.log` next to the DLL should contain `AutoSorter 0.4.0 starting` and `Hook installed on InventoryList.InitializeComponent`.
 
 **Updating from 0.2.x:** close the game and replace the files. Your old `AutoSorter.json` keeps working; with it the button is on and the old timed auto-sort is **off**.
 
@@ -83,7 +105,7 @@ dotnet build AutoSorter.csproj -c Release -p:GameDir="D:\SteamLibrary\steamapps\
 dotnet run --project tests/AutoSorter.Tests.csproj -c Release
 ```
 
-`package.ps1` builds, runs the tests and creates `AutoSorter-0.3.0.zip`; `build.cmd` does the same with a double click and installs into `D:\SE2Mods\AutoSorter` if that folder exists.
+`package.ps1` builds, runs the tests and creates `AutoSorter-0.4.0.zip`; `build.cmd` does the same with a double click and installs into `D:\SE2Mods\AutoSorter` if that folder exists.
 
 ## Credits and licenses
 

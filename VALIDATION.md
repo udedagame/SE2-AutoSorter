@@ -1,3 +1,10 @@
+# Validation — AutoSorter 0.4.0
+
+## 0.4.0 (2026-11-24)
+
+- Policy tests extended: container-name tags (ore/ingots/components, whole words, two-category names ignored), the user's layout ("Руда 0.1"/"Руда 0.2" + mixed containers: all ore ends in the ore containers, nothing else there, second press does nothing), components dumped into an ore container moved out even when their home is full, ore containers filled in order with the rest left in place, and 400 randomised layouts with named containers (amounts conserved, capacity never exceeded, wrong-category amount never grows, always terminates). Behaviour without named containers is unchanged (all earlier tests unchanged).
+- Ice fix (partial transfers, retries, stricter screen wait) is in the live adapter and needs an in-game check with a running O₂/H₂ generator.
+
 # Validation — AutoSorter 0.3.0
 
 ## Automated (run by `package.ps1` / `build.cmd`)

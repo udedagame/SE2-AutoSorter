@@ -47,7 +47,7 @@ for (int i = 0; i < 101; i++) { visited.Add(cursor); cursor = Routing.Next(curso
 Check(visited.Count == 101 && cursor == 0, "Round robin coverage");
 Check(Routing.Next(9, 0) == 0, "Empty list");
 
-// ---- 0.3.0 button sort plan (home-based, calm) ------------------------------------------
+// ---- 0.3.0/0.3.1 button sort plan (home-based, calm, spills into empty containers) ------------------------------------------
 {
     var ids = new Dictionary<string, Guid>();
     SortItemType T(string name, int rank, double mass, bool divisible = true)
@@ -74,7 +74,7 @@ Check(Routing.Next(9, 0) == 0, "Empty list");
         while (moves < 3000)
         {
             var free = cur.Select((c, i) => cont[i].MaxMass - c.Sum(x => x.Value * byKey[x.Key].MassPerUnit)).ToList();
-            var next = SortPlan.NextMove(view(), free, ordered, homes, blocked);
+            var next = SortPlan.NextMove(view(), free, ordered, homes, blocked, cont.Select(c => c.OnlyRank).ToList());
             if (next == null) break;
             var m = next.Value; var kind = byKey[m.Item];
             moves++;
@@ -119,6 +119,25 @@ Check(Routing.Next(9, 0) == 0, "Empty list");
     Check(SortPlan.Get(s3[0], ids["Ice3"]) == 60000 && SortPlan.Get(s3[0], ids["Au3"]) == 7200, "Full home untouched");
     Check(SortPlan.Get(s3[3], ids["Au3"]) == 100, "Nowhere to go: small pile stays");
     Check(Simulate(four, s3, k3).moves == 0, "Second press does nothing");
+    Check(SortPlan.Get(s3[2], ids["Ice3"]) == 6424 && !s3[1].ContainsKey(ids["Ice3"]), "0.3.1: ice beside iron spills into the empty container");
+
+    // 0.3.1, the 2026-11-06 log: homes full, new ore dumped among other ore, new empty containers.
+    // The biggest stray pile takes the empty container instead of staying stuck.
+    var k4 = new List<SortItemType> { T("Fe4", 0, 1), T("Au4", 0, 1), T("Si4", 0, 1), T("Plate4", 2, 20, false) };
+    var s4 = new List<Dictionary<Guid, double>> { Inv(("Plate4", 2000), ("Si4", 3020)), Inv(("Fe4", 67200)), Inv(("Au4", 67200)),
+        Inv(("Fe4", 5000), ("Au4", 3000), ("Si4", 1000)), Inv() };
+    var five = Enumerable.Repeat(new SortContainer(67200, null), 5).ToList();
+    Simulate(five, s4, k4);
+    Check(SortPlan.Get(s4[4], ids["Fe4"]) == 5000 && !s4[3].ContainsKey(ids["Fe4"]), "0.3.1: iron spills into the new empty container");
+    Check(SortPlan.Get(s4[1], ids["Fe4"]) == 67200 && SortPlan.Get(s4[2], ids["Au4"]) == 67200, "0.3.1: full homes untouched");
+    Check(s4[0].Count == 1 && SortPlan.Get(s4[3], ids["Si4"]) == 4020, "0.3.1: ore leaves the components container");
+    Check(Simulate(five, s4, k4).moves == 0, "0.3.1: second press does nothing");
+
+    // 0.3.1: ore lying among components, ore home full, no empty container -> goes to an ore-only container with room.
+    var k5 = new List<SortItemType> { T("Fe5", 0, 1), T("Ni5", 0, 1), T("Plate5", 2, 20, false) };
+    var s5 = new List<Dictionary<Guid, double>> { Inv(("Fe5", 1000)), Inv(("Fe5", 67200)), Inv(("Plate5", 3000), ("Fe5", 500)), Inv(("Ni5", 100)) };
+    Simulate(Enumerable.Repeat(new SortContainer(67200, null), 4).ToList(), s5, k5);
+    Check(!s5[2].ContainsKey(ids["Fe5"]), "0.3.1: ore leaves the components container when its home is full");
 
     // Randomised: conserved, never over capacity, never more scattered, always terminates.
     var rng = new Random(12345);
@@ -147,6 +166,89 @@ Check(Routing.Next(9, 0) == 0, "Empty list");
         Check(Piles() <= pilesBefore, "Random: never more scattered");
         Check(cur.All(c => c.Sum(x => x.Value * rk.First(k => k.Key == x.Key).MassPerUnit) <= cap + 1e-3), "Random: never over capacity");
     }
+    // ---- 0.4.0: containers named for a category ("Руда 0.1", "Руда 0.2", ...) -------------------------
+    Check(SortPlan.NameRank("Руда 0.1") == 0 && SortPlan.NameRank("Руда0.2") == 0 && SortPlan.NameRank("РУДА 0.50") == 0
+        && SortPlan.NameRank("Склад руды") == 0 && SortPlan.NameRank("[Ore] 3") == 0 && SortPlan.NameRank("Ores") == 0, "Ore names");
+    Check(SortPlan.NameRank("Core storage") == null && SortPlan.NameRank("Store") == null && SortPlan.NameRank("Рудник") == null
+        && SortPlan.NameRank("Cargo Container") == null && SortPlan.NameRank("Большой контейнер 2") == null && SortPlan.NameRank(null) == null, "Ordinary names");
+    Check(SortPlan.NameRank("Слитки 1") == 1 && SortPlan.NameRank("Ingots") == 1 && SortPlan.NameRank("Компоненты") == 2
+        && SortPlan.NameRank("Детали 2") == 2 && SortPlan.NameRank("Components A") == 2, "Ingot / component names");
+    Check(SortPlan.NameRank("Руда и слитки") == null, "Two categories in one name: ordinary container");
+    {
+        var kt = new List<SortItemType> { T("FeT", 0, 1), T("IceT", 0, 1), T("NiT", 0, 1), T("SteelT", 1, 1),
+            T("PlateT", 2, 20, false), T("WireT", 2, 0.2, false), T("MotorT", 2, 24, false) };
+        SortContainer Ore(double cap = 67200) => new(cap, null, 0);
+        SortContainer Plain(double cap = 67200) => new(cap, null);
+        double Wrong(List<SortContainer> c, List<Dictionary<Guid, double>> cur)
+            => Enumerable.Range(0, c.Count).Where(i => c[i].OnlyRank != null)
+                .Sum(i => cur[i].Where(x => kt.First(k => k.Key == x.Key).Rank != c[i].OnlyRank).Sum(x => x.Value));
+        double OreOutside(List<SortContainer> c, List<Dictionary<Guid, double>> cur)
+            => Enumerable.Range(0, c.Count).Where(i => c[i].OnlyRank != 0)
+                .Sum(i => cur[i].Where(x => kt.First(k => k.Key == x.Key).Rank == 0).Sum(x => x.Value));
+
+        // The user's case: "Руда 0.1", "Руда 0.2" (new, empty) + mixed ordinary containers.
+        var c1 = new List<SortContainer> { Ore(), Ore(), Plain(), Plain() };
+        var s1 = new List<Dictionary<Guid, double>> { Inv(), Inv(),
+            Inv(("FeT", 5000), ("IceT", 3000), ("PlateT", 200), ("WireT", 300), ("SteelT", 400)), Inv(("NiT", 2000), ("MotorT", 50)) };
+        Simulate(c1, s1, kt);
+        Check(OreOutside(c1, s1) == 0, "0.4.0: every ore goes into the 'Руда' containers");
+        Check(Wrong(c1, s1) == 0, "0.4.0: no components or ingots in the 'Руда' containers");
+        Check(SortPlan.Get(s1[3], ids["PlateT"]) == 200 && SortPlan.Get(s1[3], ids["WireT"]) == 300 && SortPlan.Get(s1[3], ids["MotorT"]) == 50
+            && SortPlan.Get(s1[2], ids["SteelT"]) == 400 && s1[2].Count == 1,
+            "0.4.0: with the ore gone, components gather in the components container, ingots stay apart");
+        Check(SortPlan.Get(s1[0], ids["FeT"]) + SortPlan.Get(s1[1], ids["FeT"]) == 5000 && SortPlan.Get(s1[0], ids["IceT"]) + SortPlan.Get(s1[1], ids["IceT"]) == 3000,
+            "0.4.0: ore amounts conserved");
+        Check(Simulate(c1, s1, kt).moves == 0, "0.4.0: second press does nothing");
+
+        // Components dumped into an ore container are taken out, even when their home is full.
+        var c2 = new List<SortContainer> { Ore(), Plain(2000), Plain() };
+        var s2t = new List<Dictionary<Guid, double>> { Inv(("FeT", 1000), ("PlateT", 50), ("WireT", 10)), Inv(("PlateT", 100)), Inv(("NiT", 10)) };
+        Simulate(c2, s2t, kt);
+        Check(Wrong(c2, s2t) == 0 && SortPlan.Get(s2t[0], ids["FeT"]) == 1000 && SortPlan.Get(s2t[0], ids["NiT"]) == 10, "0.4.0: components leave the ore container, ore comes in");
+        Check(s2t.Sum(c => SortPlan.Get(c, ids["PlateT"])) == 150, "0.4.0: plates conserved");
+
+        // Ore containers fill in order and are split across; what does not fit stays, nothing overflows.
+        var c3 = new List<SortContainer> { Ore(5000), Ore(5000), Plain() };
+        var s3t = new List<Dictionary<Guid, double>> { Inv(), Inv(), Inv(("IceT", 12000), ("PlateT", 10)) };
+        Simulate(c3, s3t, kt);
+        Check(SortPlan.Get(s3t[0], ids["IceT"]) == 5000 && SortPlan.Get(s3t[1], ids["IceT"]) == 5000 && SortPlan.Get(s3t[2], ids["IceT"]) == 2000,
+            "0.4.0: ice fills Руда 1, then Руда 2, rest stays");
+        Check(Simulate(c3, s3t, kt).moves == 0, "0.4.0: full ore containers: second press does nothing");
+
+        // Several ores share the ore containers (any ore, mixed together, is fine there).
+        var c4 = new List<SortContainer> { Ore(), Plain(), Plain() };
+        var s4t = new List<Dictionary<Guid, double>> { Inv(("FeT", 100)), Inv(("IceT", 50), ("MotorT", 3)), Inv(("NiT", 70), ("FeT", 30)) };
+        Simulate(c4, s4t, kt);
+        Check(SortPlan.Get(s4t[0], ids["FeT"]) == 130 && SortPlan.Get(s4t[0], ids["IceT"]) == 50 && SortPlan.Get(s4t[0], ids["NiT"]) == 70,
+            "0.4.0: all ores together in the ore container");
+
+        // Randomised with named containers: conserved, capacity, wrong-category never grows, terminates.
+        var rngT = new Random(777);
+        for (int trial = 0; trial < 400; trial++)
+        {
+            int n = rngT.Next(2, 7); double cap = new[] { 1000.0, 5000, 67200 }[rngT.Next(3)];
+            var cont = Enumerable.Range(0, n).Select(_ => new SortContainer(cap, null, rngT.Next(3) == 0 ? rngT.Next(3) : null)).ToList();
+            var cur = Enumerable.Range(0, n).Select(_ => new Dictionary<Guid, double>()).ToList();
+            foreach (var c in cur)
+            {
+                double fill = rngT.NextDouble() * cap, used = 0;
+                for (int j = rngT.Next(8); j > 0; j--)
+                {
+                    var k = kt[rngT.Next(kt.Count)];
+                    double a = k.Divisible ? Math.Round(rngT.NextDouble() * 300, 3) : rngT.Next(1, 300);
+                    if (used + a * k.MassPerUnit > fill) continue;
+                    c[k.Key] = SortPlan.Get(c, k.Key) + a; used += a * k.MassPerUnit;
+                }
+            }
+            var before = kt.ToDictionary(k => k.Key, k => cur.Sum(c => SortPlan.Get(c, k.Key)));
+            double wrongBefore = Wrong(cont, cur);
+            Simulate(cont, cur, kt);
+            Check(kt.All(k => Math.Abs(before[k.Key] - cur.Sum(c => SortPlan.Get(c, k.Key))) < 1e-6), "Named random: conserved");
+            Check(Wrong(cont, cur) <= wrongBefore + 1e-6, "Named random: wrong category never grows");
+            Check(cur.Select((c, i) => c.Sum(x => x.Value * kt.First(k => k.Key == x.Key).MassPerUnit) <= cap + 1e-3).All(x => x), "Named random: capacity");
+        }
+    }
+
     Check(SortPlan.IsExcludedName("Склад [Не сортировать]") && SortPlan.IsExcludedName("x [nosort]") && !SortPlan.IsExcludedName("Cargo"), "NoSort names");
 }
 

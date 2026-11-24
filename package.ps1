@@ -25,7 +25,7 @@ Get-ChildItem -LiteralPath $stage -File | Sort-Object Name | ForEach-Object {
     '{0}  {1}' -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash, $_.Name
 } | Set-Content -LiteralPath (Join-Path $stage 'SHA256SUMS.txt') -Encoding utf8
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
-$zip = Join-Path $OutputDirectory 'AutoSorter-0.3.0.zip'
+$zip = Join-Path $OutputDirectory 'AutoSorter-0.4.0.zip'
 Compress-Archive -LiteralPath $stage -DestinationPath $zip -Force
 Write-Output "Package: $zip"
 # Leave only this small staging directory for inspection; no recursive cleanup of computed paths.

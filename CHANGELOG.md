@@ -1,5 +1,29 @@
 # Changelog / История изменений
 
+## 0.4.0 — 2026-11-24
+
+**New: containers by name.** A container whose name contains `Ore`/`Руда` (or `Ingots`/`Слитки`, `Components`/`Компоненты`/`Детали`/`Parts`) takes only that category. All ore goes into the "Ore" containers in screen order (Ore 1, then Ore 2 when full; piles may be split); components, ingots and anything else are never put there and are moved out if they lie there. Whole words only ("Core", "Store", "Рудник" are not tags); a name with two categories is ordinary. When ore leaves an ordinary container, the remaining components now also gather in a components-only container in the same press.
+
+**Fix: ice never finished moving (O₂/H₂ generators).** Generators pull ice through the conveyor during the sort. The game then moves what is left and reports `ErrorFit`; 0.3.x treated that as a refusal and blocked that ice for the rest of the press. A partial transfer is now a normal result; real refusals are retried up to 3 times with fresh amounts; the screen-update wait checks the expected change instead of "any change" (a generator draining ice is no longer mistaken for our transfer), and a partial change after the timeout no longer stops the whole press.
+
+**Новое: контейнеры по названию.** Контейнер со словом `Руда`/`Ore` (или `Слитки`/`Ingots`, `Компоненты`/`Детали`/`Components`/`Parts`) в названии принимает только эту категорию. Вся руда идёт в контейнеры «Руда» по порядку на экране (Руда 1, при заполнении — Руда 2; кучу можно разделить); компоненты, слитки и прочее туда не кладутся и выносятся, если уже лежат. Ищется целое слово («Core», «Store», «Рудник» — не метки); название с двумя категориями — обычный контейнер. Когда руда уходит из обычного контейнера, оставшиеся компоненты в том же нажатии собираются в контейнер только с компонентами.
+
+**Исправлено: лёд не уходил до конца (генераторы O₂/H₂).** Генератор забирает лёд по конвейеру во время сортировки. Игра переносит остаток и отвечает `ErrorFit`; 0.3.x считала это отказом и до конца нажатия не трогала этот лёд. Теперь частичный перенос — нормальный результат; настоящий отказ повторяется до 3 раз со свежими количествами; ожидание окна проверяет ожидаемое изменение, а не «любое» (убыль льда от генератора больше не принимается за наш перенос), а частичное изменение после тайм-аута больше не останавливает всё нажатие.
+
+## 0.3.2 — 2026-11-21
+
+When the button is pressed in a list with 0 or 1 cargo containers it no longer stays silent: a hint is shown for 6 s. Sorting logic unchanged.
+
+Если в списке 0–1 грузовой контейнер, кнопка больше не молчит: на 6 с появляется подсказка. Логика сортировки не менялась.
+
+## 0.3.1 — 2026-11-06
+
+**Fix: newly built containers stayed empty, items stayed "stuck".** When an item's home container was full, the rest of that item simply stayed where it was, even with empty containers on the same grid. Now such a pile — if it lies among other items — moves whole into an empty container (or, if it lies among another category, e.g. ore among components, into a container holding only that category). Full homes are still never touched, piles are never split for this, and a second press does nothing.
+
+The log now lists what each container holds and every item's home at the start of a sort.
+
+**Исправлено: новые контейнеры оставались пустыми, предметы «застревали».** Если «дом» предмета заполнен, остаток раньше оставался на месте, даже когда на сетке есть пустые контейнеры. Теперь такая куча (если лежит вперемешку с другими предметами) целиком переносится в пустой контейнер, а руда среди компонентов — ещё и в контейнер только с рудой, где есть место. Полные «дома» не трогаются, кучи для этого не делятся, повторное нажатие ничего не делает. В журнале теперь видно содержимое каждого контейнера и «дом» каждого предмета.
+
 ## 0.3.0 — 2026-11-05
 
 EN: New one-click Sort button in every terminal inventory list (home-based consolidation, components to the components-only container, spill only when full, game drag-and-drop transfers with screen-update wait). Only ore/ingots/components are moved; tools, weapons (incl. modded), consumables, datapads and quest items stay. Connectors and production blocks are skipped. Timed background sorting off by default (`AutoSort`); note it is the 0.2.1 sorter without the 0.2.2 docking fixes. Alt + right click tool protection from 0.2.3 kept. Per-transfer logging.

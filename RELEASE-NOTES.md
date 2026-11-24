@@ -1,73 +1,47 @@
-# AutoSorter 0.3.0 — Sort button / кнопка «Сортировать»
+# AutoSorter 0.4.0 — containers by name, ice fix / контейнеры по названию, исправление льда
 
 **English** · [Русский ниже](#русский)
 
 ## English
 
-### New: one-click Sort button
+### New: "Ore" containers (and "Ingots", "Components")
 
-A three-bar button now sits in the header of every terminal inventory list, next to "show/hide empty" and "connected only". It sorts the cargo containers of that list:
+Put a category word in a container's name — `Ore 1`, `Ore 2`, `Руда 0.50` — and the Sort button keeps that container for that category only:
 
-- every item kind is gathered in its home — the container that already holds the most of it;
-- components in a mixed ore+components container move to a components-only container if it has room;
-- when the home is full, piles go to a bigger pile of the same kind; otherwise they stay;
-- items already at home are never moved; nothing is pushed into a full container; a second press does almost nothing;
-- transfers use the game's own drag-and-drop path and wait for the screen to update after each one;
-- only ore, ingots/materials and components move. Tools, weapons (incl. modded), consumables, datapads and quest items stay put;
-- character inventory, production blocks, traders and connectors are never touched; `[NoSort]` excludes a container.
+- all ore (iron, nickel, ice, … together) goes into the "Ore" containers, filling them in screen order; a pile may be split across them;
+- wire, plates, rods, grids, motors and every other non-ore item are never put there, and are moved out if they already lie there;
+- when every "Ore" container is full, the rest of the ore stays where it is;
+- also works with `Ingots` / `Слитки` and `Components` / `Parts` / `Компоненты` / `Детали`. Whole words only ("Core", "Store" are not tags).
 
-### Changed
+### Fixed: ice did not finish moving
 
-- The timed background sorter is **off by default** (`"AutoSort": false`) and not recommended: it is the 0.2.1 sorter without the 0.2.2 docking fixes. Existing `AutoSorter.json` files keep working.
-- Quick deposit (Alt + right click) tool protection from 0.2.3 is kept: registered tools and weapons, including modded ones, stay in the backpack.
-- The log records every transfer and the keep/sort decision for each item kind.
+O₂/H₂ generators pull ice through the conveyor while the button sorts. The game then moves what is left and answers "did not fit"; 0.3.x took that as a refusal and left that ice for the rest of the press. Now partial transfers count as success, refusals are retried up to 3 times with fresh amounts, and the wait for the screen checks the expected change (a generator draining ice is no longer mistaken for the sorter's own transfer).
 
-### Install
+### Install / update
 
-Download **AutoSorter-0.3.0.zip** below (not "Source code"), extract the AutoSorter folder (e.g. `D:\SE2Mods\AutoSorter`) and add it to Steam launch options:
+Download **AutoSorter-0.4.0.zip** below (not "Source code"), close the game and replace the files in your AutoSorter folder (e.g. `D:\SE2Mods\AutoSorter`). Launch option unchanged:
 
 ```text
 "-plugins:D:\SE2Mods\AutoSorter\AutoSorter.dll"
 ```
 
-With BuildPlanner: `"-plugins:D:\SE2Mods\BuildPlanner\BuildPlanner.dll;D:\SE2Mods\AutoSorter\AutoSorter.dll"`. Full instructions: README.md.
-
-### Status
-
-Tested in a live local world on game assembly 4.0.0.3165: sorting of 5 cargo containers, components moved to the components container, ore consolidated, tools kept in place, Alt + right click deposit with modded tools. Remote/dedicated servers are not supported. Back up your save before first use.
-
----
+Your `AutoSorter.json` keeps working. The log line should read `AutoSorter 0.4.0 starting`.
 
 ## Русский
 
-### Новое: кнопка «Сортировать»
+### Новое: контейнеры «Руда» (а также «Слитки», «Компоненты»)
 
-В шапке каждого списка инвентаря терминала, рядом со штатными «показать/скрыть пустые» и «только подключённые», появилась кнопка с тремя полосками. Она сортирует грузовые контейнеры этого списка:
+Впишите категорию в название контейнера — `Руда 0.1`, `Руда 0.2`, `Руда 0.50`, `Руда 0.60` — и кнопка «Сортировать» будет держать его только для этой категории:
 
-- каждый вид предметов собирается в своём «доме» — контейнере, где его уже больше всего;
-- компоненты из смешанного контейнера (руда + компоненты) переезжают в контейнер только с компонентами, если там есть место;
-- если дом полон, кучка уходит к более крупной кучке того же вида, иначе остаётся;
-- то, что уже лежит дома, не трогается; в полный контейнер ничего не толкается; повторное нажатие почти ничего не делает;
-- переносы идут штатным путём, как перетаскивание мышью, с ожиданием обновления окна после каждого;
-- переносятся только руда, слитки/материалы и компоненты. Инструменты, оружие (в том числе модовые), расходники, датапады и квестовые предметы остаются на месте;
-- инвентарь персонажа, производственные блоки, торговцы и коннекторы не трогаются; `[NoSort]` исключает контейнер.
+- вся руда (железо, никель, лёд… вместе) идёт в контейнеры «Руда», заполняя их по порядку на экране; кучу можно разделить между ними;
+- проволока, пластины, стержни, решётки, моторы и всё остальное, что не руда, туда не кладутся, а если уже лежат — выносятся;
+- если все контейнеры «Руда» полны, остаток руды остаётся на месте;
+- так же работают `Слитки` / `Ingots` и `Компоненты` / `Детали` / `Components` / `Parts`. Ищется целое слово («Рудник», «Core» — не метки).
 
-### Изменения
+### Исправлено: лёд не уходил до конца
 
-- Фоновая сортировка по таймеру **выключена по умолчанию** (`"AutoSort": false`) и не рекомендуется: это сортировщик 0.2.1 без исправлений 0.2.2 для стыковки. Старые файлы `AutoSorter.json` подходят.
-- Сохранена защита инструментов при быстрой выгрузке Alt + ПКМ из 0.2.3: зарегистрированные инструменты и оружие, включая модовые, остаются в рюкзаке.
-- В журнал записывается каждый перенос и решение по каждому виду предметов.
+Генераторы O₂/H₂ забирают лёд по конвейеру прямо во время сортировки. Игра переносит остаток и отвечает «не поместилось»; 0.3.x считала это отказом и до конца нажатия не трогала этот лёд. Теперь частичный перенос считается успехом, отказ повторяется до 3 раз со свежими количествами, а ожидание обновления окна проверяет ожидаемое изменение (убыль льда от генератора больше не принимается за перенос сортировщика).
 
-### Установка
+### Установка / обновление
 
-Скачайте ниже **AutoSorter-0.3.0.zip** (не «Source code»), распакуйте папку AutoSorter (например, в `D:\SE2Mods\AutoSorter`) и добавьте в параметры запуска Steam:
-
-```text
-"-plugins:D:\SE2Mods\AutoSorter\AutoSorter.dll"
-```
-
-Вместе с BuildPlanner: `"-plugins:D:\SE2Mods\BuildPlanner\BuildPlanner.dll;D:\SE2Mods\AutoSorter\AutoSorter.dll"`. Подробно — в README-RU.md.
-
-### Статус
-
-Проверено в живом локальном мире на сборке игры 4.0.0.3165: сортировка 5 грузовых контейнеров, компоненты ушли в контейнер с компонентами, руда собрана по видам, инструменты остались на местах, выгрузка Alt + ПКМ с модовыми инструментами. Удалённые и выделенные серверы не поддерживаются. Перед первым использованием сделайте копию сохранения.
+Скачайте **AutoSorter-0.4.0.zip** ниже (не «Source code»), закройте игру и замените файлы в папке AutoSorter (например, `D:\SE2Mods\AutoSorter`). Параметр запуска прежний. Старый `AutoSorter.json` подходит. В журнале должна быть строка `AutoSorter 0.4.0 starting`.

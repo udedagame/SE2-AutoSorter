@@ -58,7 +58,7 @@ public sealed class AutoSorterPlugin : IPlugin, IDisposable
             Log.Write("DISABLED: AutoSorter.json is invalid: " + e.Message);
             return;
         }
-        Log.Write($"AutoSorter 0.3.0 starting. Enabled={_settings.Enabled}, ManualButton={_settings.ManualButton}, AutoSort={_settings.AutoSort}, DryRun={_settings.DryRun}. Game assembly={typeof(InventoryComponent).Assembly.GetName().Version}");
+        Log.Write($"AutoSorter {typeof(AutoSorterPlugin).Assembly.GetName().Version?.ToString(3)} starting. Enabled={_settings.Enabled}, ManualButton={_settings.ManualButton}, AutoSort={_settings.AutoSort}, DryRun={_settings.DryRun}. Game assembly={typeof(InventoryComponent).Assembly.GetName().Version}");
         if (!_settings.Enabled) return;
 
         try { ToolProtection.Install(); }

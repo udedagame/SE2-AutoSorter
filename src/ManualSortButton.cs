@@ -75,7 +75,7 @@ internal static class ManualSortButton
         Grid.SetRow(button, Grid.GetRow(connected));
         if (!double.IsNaN(connected.Width)) button.Width = connected.Width;
         if (!double.IsNaN(connected.Height)) button.Height = connected.Height;
-        const string tip = "Сортировать: одинаковые предметы в один контейнер\nSort: same items into one container";
+        const string tip = "Сортировать: одинаковые предметы в один контейнер.\nКонтейнер с «Руда» в названии — только для руды.\nSort: same items into one container; \"Ore\" in a name = ore only";
         ToolTip.SetTip(button, tip);
 
         button.Click += (_, _) =>
@@ -92,7 +92,23 @@ internal static class ManualSortButton
                     }
                     else ToolTip.SetTip(button, status);
                 });
-                if (!started) button.IsEnabled = true;
+                if (!started)
+                {
+                    button.IsEnabled = true;
+                    // 0.3.2: show why nothing happened, then put the normal hint back.
+                    if (!Equals(ToolTip.GetTip(button), tip))
+                    {
+                        ToolTip.SetIsOpen(button, true);
+                        var reset = new Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
+                        reset.Tick += (_, _) =>
+                        {
+                            reset.Stop();
+                            ToolTip.SetIsOpen(button, false);
+                            ToolTip.SetTip(button, tip);
+                        };
+                        reset.Start();
+                    }
+                }
             }
             catch (Exception e)
             {
