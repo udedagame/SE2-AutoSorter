@@ -249,6 +249,20 @@ Check(Routing.Next(9, 0) == 0, "Empty list");
         }
     }
 
+    // ---- 0.4.1: overflow goes into as few containers as possible ----------------------------------
+    {
+        var kg = new List<SortItemType> { T("GridG", 2, 10, false), T("PlateG", 2, 20, false) };
+        // Home (#0) is full; grids lie in #1, #2, #3 (equal piles in #1 and #2). All should end up
+        // in ONE container, not stay spread over three.
+        var cg = new List<SortContainer> { new(1000, null), new(67200, null), new(67200, null), new(67200, null) };
+        var sg = new List<Dictionary<Guid, double>> { Inv(("GridG", 100)), Inv(("GridG", 30), ("PlateG", 5)), Inv(("GridG", 30)), Inv(("GridG", 10), ("PlateG", 1)) };
+        Simulate(cg, sg, kg);
+        var gridPlaces = Enumerable.Range(1, 3).Where(i => SortPlan.Get(sg[i], ids["GridG"]) > 0).ToList();
+        Check(SortPlan.Get(sg[0], ids["GridG"]) == 100 && gridPlaces.Count == 1 && SortPlan.Get(sg[gridPlaces[0]], ids["GridG"]) == 70,
+            "0.4.1: full home, the rest of the grids gather in one container");
+        Check(Simulate(cg, sg, kg).moves == 0, "0.4.1: second press does nothing");
+    }
+
     Check(SortPlan.IsExcludedName("Склад [Не сортировать]") && SortPlan.IsExcludedName("x [nosort]") && !SortPlan.IsExcludedName("Cargo"), "NoSort names");
 }
 

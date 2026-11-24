@@ -6,7 +6,7 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-    <Version>0.4.0</Version>
+    <Version>0.4.1</Version>
     <Deterministic>true</Deterministic>
     <PathMap>$(MSBuildProjectDirectory)=AutoSorter</PathMap>
     <GameDir Condition="'$(GameDir)' == ''">D:\SteamLibrary\steamapps\common\SpaceEngineers2\Game2</GameDir>

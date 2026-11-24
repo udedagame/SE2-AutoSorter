@@ -1,5 +1,15 @@
 # Changelog / История изменений
 
+## 0.4.1 — 2026-11-24
+
+**New: duplicate stacks are merged.** In Space Engineers 2 a stack has no size limit; a second stack of the same item (e.g. "grid 50" + "grid 30") appears when items are dropped onto a specific slot, and the game never joins them afterwards. Each press now first merges such stacks inside every container (the last stack is dropped onto the first one, so slot numbers cannot shift).
+
+**Changed: overflow gathers in as few containers as possible.** When an item's home is full, two equal piles in different containers (30 + 30) are now joined too (the first one on screen wins); before, only strictly bigger piles attracted the others, so equal piles stayed apart.
+
+**Новое: одинаковые стопки сливаются.** В Space Engineers 2 у стопки нет предела; вторая стопка того же предмета («решётка 50» + «решётка 30») появляется, когда предметы кладут в конкретную ячейку, и игра сама их уже не объединяет. Теперь каждое нажатие сначала сливает такие стопки в каждом контейнере (последняя стопка кладётся на первую, чтобы номера ячеек не сдвинулись).
+
+**Изменено: остаток собирается в как можно меньшем числе контейнеров.** Если «дом» предмета полон, две равные кучи в разных контейнерах (30 + 30) теперь тоже объединяются (в ту, что выше на экране); раньше другие кучи тянулись только к строго большей, и равные оставались порознь.
+
 ## 0.4.0 — 2026-11-24
 
 **New: containers by name.** A container whose name contains `Ore`/`Руда` (or `Ingots`/`Слитки`, `Components`/`Компоненты`/`Детали`/`Parts`) takes only that category. All ore goes into the "Ore" containers in screen order (Ore 1, then Ore 2 when full; piles may be split); components, ingots and anything else are never put there and are moved out if they lie there. Whole words only ("Core", "Store", "Рудник" are not tags); a name with two categories is ordinary. When ore leaves an ordinary container, the remaining components now also gather in a components-only container in the same press.

@@ -1,5 +1,5 @@
 @echo off
-rem Builds AutoSorter 0.4.0, runs the tests, makes AutoSorter-0.4.0.zip and installs it to D:\SE2Mods\AutoSorter.
+rem Builds AutoSorter 0.4.1, runs the tests, makes AutoSorter-0.4.1.zip and installs it to D:\SE2Mods\AutoSorter.
 cd /d "%~dp0"
 set "DOTNET=dotnet"
 set "INSTALL=D:\SE2Mods\AutoSorter"
@@ -10,7 +10,7 @@ set "RC=%ERRORLEVEL%"
 type build-log.txt
 echo.
 if not "%RC%"=="0" (echo BUILD FAILED - send build-log.txt to Claude& pause& exit /b 1)
-echo OK: AutoSorter-0.4.0.zip is ready
+echo OK: AutoSorter-0.4.1.zip is ready
 if not exist "%INSTALL%\" (echo Install folder %INSTALL% not found - copy files from the zip manually.& pause& exit /b 0)
 set "BIN=%~dp0bin\Release\net9.0"
 copy /Y "%BIN%\AutoSorter.dll" "%INSTALL%\" >nul && copy /Y "%BIN%\AutoSorter.deps.json" "%INSTALL%\" >nul && copy /Y "%BIN%\AutoSorter.runtimeconfig.json" "%INSTALL%\" >nul

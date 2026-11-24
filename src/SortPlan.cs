@@ -144,7 +144,7 @@ public static class SortPlan
                 else
                     targets.AddRange(Enumerable.Range(0, n)
                         .Where(i => i != home && i != from && Allowed(i) && (!anyOwn || Own(i))
-                            && Get(current[i], type.Key) > pile + Epsilon)
+                            && Bigger(Get(current[i], type.Key), i, pile, from))
                         .OrderByDescending(i => Get(current[i], type.Key)).ThenBy(i => i));
 
                 foreach (int to in targets)
@@ -201,6 +201,14 @@ public static class SortPlan
         }
         return null;
     }
+
+    /// <summary>
+    /// 0.4.1: pile (amount a at i) outranks pile (b at j): bigger, or — when equal — earlier on screen.
+    /// Before, two equal piles (30 + 30) in different containers were never joined when the home
+    /// was full. A strict order still guarantees that nothing moves back and forth.
+    /// </summary>
+    private static bool Bigger(double a, int i, double b, int j)
+        => a > b + Epsilon || (Math.Abs(a - b) <= Epsilon && a > Epsilon && i < j);
 
     private static double Room(SortItemType type, double freeMass)
     {

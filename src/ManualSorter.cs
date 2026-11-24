@@ -45,6 +45,12 @@ internal sealed class ManualSorter
     private readonly Dictionary<(int, Guid, int), int> _refusals = new();
     private const int MaxRefusals = 3;
     private List<int?> _onlyRank = new();
+    // 0.4.1: duplicate stacks of one item inside one container ("grid 50" + "grid 30") are merged
+    // first. Pairs (container, item) the game refused to merge are not tried again this press.
+    private readonly HashSet<(int, Guid)> _mergeBlocked = new();
+    private bool _merging;
+    private int _stacksBefore;
+    private int _merges;
     private readonly Stopwatch _clock = Stopwatch.StartNew();
 
     private List<InventoryModel> _inventories = new();
@@ -258,11 +264,13 @@ internal sealed class ManualSorter
 
     private void Step()
     {
-        if (_transfers + _failures >= Settings.Current.MaxTransfersPerPress)
+        if (_transfers + _merges + _failures >= Settings.Current.MaxTransfersPerPress)
         {
             Finish($"stopped at the limit of {Settings.Current.MaxTransfersPerPress} transfers; press again to continue");
             return;
         }
+
+        if (TryMergeStep()) return;
 
         var current = Snapshot(out _);
         // Real free room right now, as the game shows it (includes tools and anything else).
@@ -311,6 +319,7 @@ internal sealed class ManualSorter
         }
 
         Log.Write($"Move {(double)amount:0.##} x {stack.Definition.DebugNameShort}: #{m.From + 1} -> #{m.To + 1}");
+        _merging = false;
         _pending = _interaction.TransferItemAsync(to, stack, amount, null);
         _waitStarted = _clock.ElapsedMilliseconds;
         _phase = Phase.WaitTransfer;
@@ -330,6 +339,20 @@ internal sealed class ManualSorter
         if (!_pending.TryGetResult(out outcome)) outcome = null;
         var result = outcome?.Item1 ?? ItemTransferResult.ErrorMissingItem;
         var moved = outcome?.Item2 ?? FixedPoint.Zero;
+
+        if (_merging)
+        {
+            if (result != ItemTransferResult.Success || moved <= FixedPoint.Zero)
+            {
+                _mergeBlocked.Add((_move.From, _move.Item));
+                Log.Write($"Merge in '{_waitFrom?.EntityName}': {result}, moved {(double)moved:0.##}; not merging this item here.");
+                _phase = Phase.NextStep;
+                return;
+            }
+            _waitStarted = _clock.ElapsedMilliseconds;
+            _phase = Phase.WaitScreen;
+            return;
+        }
 
         var key = (_move.From, _move.Item, _move.To);
         if (moved > FixedPoint.Zero)
@@ -369,6 +392,24 @@ internal sealed class ManualSorter
     private void WaitScreen()
     {
         long waited = _clock.ElapsedMilliseconds - _waitStarted;
+        if (_merging)
+        {
+            int stacks = _waitFrom == null ? 0 : Stacks(_waitFrom, _move.Item).Count;
+            if (stacks < _stacksBefore)
+            {
+                _merges++;
+                _phase = Phase.NextStep;
+                return;
+            }
+            if (waited > Settings.Current.TransferTimeoutMs)
+            {
+                // The game kept two stacks (e.g. it put the items into a new slot): do not loop.
+                _mergeBlocked.Add((_move.From, _move.Item));
+                Log.Write($"Merge in '{_waitFrom?.EntityName}' did not reduce the stacks; not merging this item here.");
+                _phase = Phase.NextStep;
+            }
+            return;
+        }
         if (_moved <= 0)
         {
             // After a refusal: a short pause, so a retry sees fresh amounts.
@@ -404,6 +445,66 @@ internal sealed class ManualSorter
         }
     }
 
+    /// <summary>Indexes (screen order) of the stacks of one item kind in one inventory.</summary>
+    private static List<int> Stacks(InventoryModel inventory, Guid item)
+    {
+        var result = new List<int>();
+        int i = 0;
+        foreach (var stack in inventory.Items)
+        {
+            if (stack?.Definition?.Guid == item && !stack.Disabled && IsSortable(stack)) result.Add(i);
+            i++;
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// 0.4.1: if some container holds one item kind in two or more stacks, drop its LAST stack onto
+    /// its FIRST one (the game adds onto the stack in the target slot). Last-onto-first matters: the
+    /// server removes the source stack before adding, so a source BEFORE the target would shift the
+    /// target's slot number and the items would land in a new stack instead.
+    /// </summary>
+    private bool TryMergeStep()
+    {
+        for (int c = 0; c < _inventories.Count; c++)
+        {
+            var inv = _inventories[c];
+            var kinds = new HashSet<Guid>();
+            foreach (var item in inv.Items)
+                if (item?.Definition is { IsStackable: true } d && IsSortable(item)) kinds.Add(d.Guid);
+            foreach (var kind in kinds)
+            {
+                if (_mergeBlocked.Contains((c, kind))) continue;
+                var stacks = Stacks(inv, kind);
+                if (stacks.Count < 2) continue;
+                var items = inv.Items.ToList();
+                var target = items[stacks[0]];
+                var source = items[stacks[^1]];
+                if (target == null || source == null) continue;
+
+                _merging = true;
+                _move = new SortMove(c, c, kind, (double)source.Amount);
+                _waitFrom = inv;
+                _waitTo = inv;
+                _stacksBefore = stacks.Count;
+                if (Settings.Current.DryRun)
+                {
+                    Log.Write($"DryRun: would merge {(double)source.Amount:0.##} x {source.Definition.DebugNameShort} onto slot {stacks[0] + 1} in '{inv.EntityName}'");
+                    _mergeBlocked.Add((c, kind));
+                    _merging = false;
+                    return true;
+                }
+                Log.Write($"Merge {(double)source.Amount:0.##} x {source.Definition.DebugNameShort}: #{c + 1} slot {stacks[^1] + 1} -> slot {stacks[0] + 1} ({stacks.Count} stacks)");
+                _pending = _interaction.TransferItemAsync(inv, source, source.Amount, stacks[0]);
+                _waitStarted = _clock.ElapsedMilliseconds;
+                _phase = Phase.WaitTransfer;
+                _status($"AutoSorter: {_transfers + _merges + 1}…");
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static double Count(InventoryModel inventory, Guid item)
     {
         double sum = 0;
@@ -418,7 +519,7 @@ internal sealed class ManualSorter
         _phase = Phase.Done;
         _timer.Stop();
         Running.Remove(_list);
-        Log.Write($"Sort finished ({why}): {_transfers} transfer(s), {_failures} refused, {_clock.ElapsedMilliseconds} ms.");
+        Log.Write($"Sort finished ({why}): {_transfers} transfer(s), {_merges} stack merge(s), {_failures} refused, {_clock.ElapsedMilliseconds} ms.");
         _status(null);
     }
 }

@@ -19,6 +19,10 @@ It is a manually installed **plugin** (loaded with the game's `-plugins:` launch
 - **Only ore, ingots and components are sorted.** Tools and weapons (vanilla *and* modded), consumables, datapads, quest items and schematics stay exactly where they are.
 - **Exclude a container** by adding `[NoSort]` or `[Не сортировать]` anywhere in its name.
 
+## Duplicate stacks are merged (0.4.1)
+
+In SE2 a stack has no size limit: one item can lie in a container as a single stack of any size. A second stack ("grid 50" next to "grid 30") appears when items are dropped onto a specific slot, and the game never joins them afterwards. The button first merges such stacks in every container, then sorts between containers. When an item's home is full, the rest gathers in **one** next container (the one holding most of it) instead of staying spread over several.
+
 ## Containers by name: "Ore", "Ingots", "Components" (0.4.0)
 
 To keep ore apart from parts, put the category in the container's **name**:
@@ -47,7 +51,7 @@ The game's quick deposit (**Alt + right mouse button** on a container) unloads e
 
 ## Installation
 
-1. Download **`AutoSorter-0.4.0.zip`** from the release's **Assets** (not GitHub's "Source code" archives).
+1. Download **`AutoSorter-0.4.1.zip`** from the release's **Assets** (not GitHub's "Source code" archives).
 2. Close the game. Extract the whole **AutoSorter** folder to a permanent place, for example `D:\SE2Mods\AutoSorter`. Keep all DLLs together.
 3. In Steam: **Space Engineers 2 → Properties → General → Launch Options**, enter:
 
@@ -64,7 +68,7 @@ The game's quick deposit (**Alt + right mouse button** on a container) unloads e
    Use your real paths. If you already have a `-plugins:` argument, add the path to it with `;` — do not add a second `-plugins:`.
 4. Start the game, open a container, **Inventory** tab: the three-bar button is at the top right of each list.
 
-`AutoSorter.log` next to the DLL should contain `AutoSorter 0.4.0 starting` and `Hook installed on InventoryList.InitializeComponent`.
+`AutoSorter.log` next to the DLL should contain `AutoSorter 0.4.1 starting` and `Hook installed on InventoryList.InitializeComponent`.
 
 **Updating from 0.2.x:** close the game and replace the files. Your old `AutoSorter.json` keeps working; with it the button is on and the old timed auto-sort is **off**.
 
@@ -105,7 +109,7 @@ dotnet build AutoSorter.csproj -c Release -p:GameDir="D:\SteamLibrary\steamapps\
 dotnet run --project tests/AutoSorter.Tests.csproj -c Release
 ```
 
-`package.ps1` builds, runs the tests and creates `AutoSorter-0.4.0.zip`; `build.cmd` does the same with a double click and installs into `D:\SE2Mods\AutoSorter` if that folder exists.
+`package.ps1` builds, runs the tests and creates `AutoSorter-0.4.1.zip`; `build.cmd` does the same with a double click and installs into `D:\SE2Mods\AutoSorter` if that folder exists.
 
 ## Credits and licenses
 

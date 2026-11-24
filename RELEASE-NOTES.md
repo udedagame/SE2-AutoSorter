@@ -1,10 +1,17 @@
-# AutoSorter 0.4.0 — containers by name, ice fix / контейнеры по названию, исправление льда
+# AutoSorter 0.4.1 — stack merging / слияние стопок
 
 **English** · [Русский ниже](#русский)
 
 ## English
 
-### New: "Ore" containers (and "Ingots", "Components")
+### New in 0.4.1: duplicate stacks are merged
+
+A second stack of the same item in one container ("grid 50" + "grid 30") is now merged into the first one before sorting. When an item's home is full, the rest gathers in one next container instead of staying spread over several (equal piles are joined too).
+
+
+### From 0.4.0
+
+#### "Ore" containers (and "Ingots", "Components")
 
 Put a category word in a container's name — `Ore 1`, `Ore 2`, `Руда 0.50` — and the Sort button keeps that container for that category only:
 
@@ -19,15 +26,21 @@ O₂/H₂ generators pull ice through the conveyor while the button sorts. The g
 
 ### Install / update
 
-Download **AutoSorter-0.4.0.zip** below (not "Source code"), close the game and replace the files in your AutoSorter folder (e.g. `D:\SE2Mods\AutoSorter`). Launch option unchanged:
+Download **AutoSorter-0.4.1.zip** below (not "Source code"), close the game and replace the files in your AutoSorter folder (e.g. `D:\SE2Mods\AutoSorter`). Launch option unchanged:
 
 ```text
 "-plugins:D:\SE2Mods\AutoSorter\AutoSorter.dll"
 ```
 
-Your `AutoSorter.json` keeps working. The log line should read `AutoSorter 0.4.0 starting`.
+Your `AutoSorter.json` keeps working. The log line should read `AutoSorter 0.4.1 starting`.
 
 ## Русский
+
+### Новое в 0.4.1: одинаковые стопки сливаются
+
+Вторая стопка того же предмета в одном контейнере («решётка 50» + «решётка 30») теперь перед сортировкой сливается с первой. Если «дом» предмета полон, остаток собирается в один следующий контейнер, а не остаётся раскиданным по нескольким (равные кучи тоже объединяются).
+
+### Из 0.4.0
 
 ### Новое: контейнеры «Руда» (а также «Слитки», «Компоненты»)
 
@@ -44,4 +57,4 @@ Your `AutoSorter.json` keeps working. The log line should read `AutoSorter 0.4.0
 
 ### Установка / обновление
 
-Скачайте **AutoSorter-0.4.0.zip** ниже (не «Source code»), закройте игру и замените файлы в папке AutoSorter (например, `D:\SE2Mods\AutoSorter`). Параметр запуска прежний. Старый `AutoSorter.json` подходит. В журнале должна быть строка `AutoSorter 0.4.0 starting`.
+Скачайте **AutoSorter-0.4.1.zip** ниже (не «Source code»), закройте игру и замените файлы в папке AutoSorter (например, `D:\SE2Mods\AutoSorter`). Параметр запуска прежний. Старый `AutoSorter.json` подходит. В журнале должна быть строка `AutoSorter 0.4.1 starting`.
